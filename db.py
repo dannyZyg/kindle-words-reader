@@ -51,9 +51,12 @@ class KindleVocabDB:
         self.db = sqlite3.connect(path)
         self.db.row_factory = self._lookup_factory
 
-    def _convert_to_datetime(self, timestamp: int) -> datetime:
+    def _convert_to_datetime(self, timestamp_ms: int) -> datetime:
         """Returns the UTC datetime from the db timestamp."""
-        return datetime.fromtimestamp(timestamp=timestamp, tz=timezone.utc)
+
+        # database timestamps are in ms. Convert to seconds.
+        timestamp_sec = timestamp_ms / 1000
+        return datetime.fromtimestamp(timestamp=timestamp_sec, tz=timezone.utc)
 
     def _lookup_factory(self, cursor: sqlite3.Cursor, row: sqlite3.Row) -> Lookup:
         """ Maps a table row to Lookup objects """
