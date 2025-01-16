@@ -1,0 +1,18 @@
+<table>
+  <thead>
+    <tr>
+      <th>Word</th>
+      <th>Book</th>
+      <th>Sentence</th>
+      <th>Date</th>
+      <th>Word ID</th>
+      <th>Language</th>
+      <th>Category</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for item in lookups %}
+        {% include "includes/table_row.html" %}
+    {% endfor %}
+  </tbody>
+</table>
