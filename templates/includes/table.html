@@ -1,18 +1,25 @@
-<table>
-  <thead>
-    <tr>
-      <th>Word</th>
-      <th>Book</th>
-      <th>Sentence</th>
-      <th>Date</th>
-      <th>Word ID</th>
-      <th>Language</th>
-      <th>Category</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for item in lookups %}
-        {% include "includes/table_row.html" %}
-    {% endfor %}
-  </tbody>
-</table>
+<div
+  id="lookup-table"
+  class="lookup-table"
+>
+  <table>
+    <thead>
+      <tr>
+        <th>Word</th>
+        <th>Book</th>
+        <th>Sentence</th>
+        <th>Date</th>
+        <th>Word ID</th>
+        <th>Language</th>
+        <th>Category</th>
+      </tr>
+    </thead>
+    <tbody
+      id="lookup-table-body"
+      hx-get="/lookups?unique={{ exclude_duplicate_sentences or '0' }}"
+      hx-trigger="load"
+      hx-swap="beforeend"
+    >
+    </tbody>
+  </table>
+</div>

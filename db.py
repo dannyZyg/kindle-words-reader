@@ -77,10 +77,21 @@ class KindleVocabDB:
             category=LearningState(names_to_values.get(WordTable.CATEGORY.value)),
         )
 
-    def get_lookups(self) -> list[Lookup]:
+    def get_lookups(self, limit: int = 50, exclude_duplicate_usage_lookups: bool = False, page: int = 0) -> list[Lookup]:
         cursor = self.db.cursor()
 
-        sql = """
+        offset = limit * page
+
+        unique_query = """
+        WHERE lu.usage IN (
+            SELECT lu.usage
+            FROM LOOKUPS lu
+            GROUP BY lu.usage
+            HAVING COUNT(*) = 1
+        )
+        """
+
+        sql = f"""
         SELECT
             lu.id as lookup_id,
             lu.word_key,
@@ -98,7 +109,10 @@ class KindleVocabDB:
         FROM LOOKUPS lu
         INNER JOIN WORDS w ON w.id = lu.word_key
         INNER JOIN BOOK_INFO b ON b.id = lu.book_key
+        {unique_query if exclude_duplicate_usage_lookups else ""}
+        ORDER BY lu.timestamp DESC
+        LIMIT ? OFFSET ?
         """
 
-        result = cursor.execute(sql)
+        result = cursor.execute(sql, (limit, offset))
         return result.fetchall()

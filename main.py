@@ -37,13 +37,18 @@ def shutdown_server():
     os._exit(0)
 
 
-@app.get("/", response_class=HTMLResponse)
-async def index(request: Request):
+@app.get("/lookups", response_class=HTMLResponse)
+async def lookups(request: Request):
     global db
 
+    exclude_duplicate_sentences = request.query_params.get('unique') == '1'
+    page = int(request.query_params.get('page', 0))
+    limit = 5
+
     try:
-        results = db.get_lookups()
-    except sqlite3.DatabaseError:
+        results = db.get_lookups(limit=limit, exclude_duplicate_usage_lookups=exclude_duplicate_sentences, page=page)
+    except sqlite3.DatabaseError as e:
+        print(e)
         print(
             "Encountered database error during query, assuming Kindle has been unplugged so returning to wait mode."
         )
@@ -55,9 +60,29 @@ async def index(request: Request):
         threading.Thread(target=shutdown_server).start()
     else:
         # If no exception has occurred, return the results
-        template = templates_env.get_template("index.html")
-        html_content = template.render(lookups=results)
-        return HTMLResponse(content=html_content)
+
+        rendered_rows = []
+        template = templates_env.get_template("includes/table_row.html")
+        next_page_num = page + 1
+
+        for i, item in enumerate(results):
+            is_last_item = i == len(results) - 1
+            html_content = template.render(
+                item=item,
+                is_last_item=is_last_item,
+                next_page_num=next_page_num,
+                exclude_duplicate_sentences=int(exclude_duplicate_sentences),
+            )
+            rendered_rows.append(html_content)
+
+        return HTMLResponse(content="".join(rendered_rows))
+
+
+@app.get("/", response_class=HTMLResponse)
+async def index(request: Request):
+    template = templates_env.get_template("index.html")
+    html_content = template.render()
+    return HTMLResponse(content=html_content)
 
 
 def wait_for_kindle():

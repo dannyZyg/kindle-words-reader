@@ -4,13 +4,15 @@
   <title>Kindle Vocabulary</title>
   <meta charset="UTF-8">
   <link rel="stylesheet" href="/static/styles.css">
+  <script src="https://unpkg.com/htmx.org@2.0.4" integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+" crossorigin="anonymous"></script>
 </head>
 <body>
   <h1>Kindle Vocabulary</h1>
   <h2>Word Lookups</h2>
 
+  <button hx-get="/?unique=1" hx-target="#lookup-table">Show unique sentences</button>
+
   {% block table %}
-  <!-- Table will be inserted here -->
   {% endblock %}
 
 </body>

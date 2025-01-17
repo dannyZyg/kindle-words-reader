@@ -1,7 +1,21 @@
 table {
-  margin: 20px;
+  width: 100%;
   border-collapse: collapse;
 }
+
+.lookup-table {
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
+  border: 1px solid #ddd;
+}
+
+thead {
+  position: sticky;
+  top: 0; /* Pin the header to the top */
+  z-index: 1; /* Ensure it appears above table rows */
+  background-color: #fff;
+}
+
 th, td {
   border: 1px solid #ddd;
   padding: 8px;
