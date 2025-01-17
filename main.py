@@ -1,3 +1,5 @@
+from dataclasses import dataclass
+from typing import Literal
 import os
 import platform
 import sqlite3
@@ -31,6 +33,12 @@ PORT = 11000
 
 db = None
 
+@dataclass
+class Filters:
+    show_unique_sentences: Literal["true"] | Literal["false"]
+    limit: int = 10
+    page: int = 0
+
 
 def shutdown_server():
     print("Exiting...")
@@ -41,12 +49,19 @@ def shutdown_server():
 async def lookups(request: Request):
     global db
 
-    exclude_duplicate_sentences = request.query_params.get('unique') == '1'
-    page = int(request.query_params.get('page', 0))
-    limit = 5
+    show_unique_sentences = "true" if request.query_params.get('unique') == "true" else "false"
+
+    filters = Filters(
+        show_unique_sentences=show_unique_sentences,
+        page=int(request.query_params.get('page', 0)) + 1,  # The next request will use this value for next page
+    )
 
     try:
-        results = db.get_lookups(limit=limit, exclude_duplicate_usage_lookups=exclude_duplicate_sentences, page=page)
+        results = db.get_lookups(
+            limit=filters.limit,
+            exclude_duplicate_usage_lookups=filters.show_unique_sentences == "true",
+            page=filters.page,
+        )
     except sqlite3.DatabaseError as e:
         print(e)
         print(
@@ -63,15 +78,13 @@ async def lookups(request: Request):
 
         rendered_rows = []
         template = templates_env.get_template("includes/table_row.html")
-        next_page_num = page + 1
 
         for i, item in enumerate(results):
             is_last_item = i == len(results) - 1
             html_content = template.render(
                 item=item,
                 is_last_item=is_last_item,
-                next_page_num=next_page_num,
-                exclude_duplicate_sentences=int(exclude_duplicate_sentences),
+                filters=filters,
             )
             rendered_rows.append(html_content)
 
@@ -79,9 +92,10 @@ async def lookups(request: Request):
 
 
 @app.get("/", response_class=HTMLResponse)
-async def index(request: Request):
+async def index(_: Request):
+    filters = Filters(show_unique_sentences="false")
     template = templates_env.get_template("index.html")
-    html_content = template.render()
+    html_content = template.render(filters=filters)
     return HTMLResponse(content=html_content)
 
 

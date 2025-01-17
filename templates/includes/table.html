@@ -16,10 +16,11 @@
     </thead>
     <tbody
       id="lookup-table-body"
-      hx-get="/lookups?unique={{ exclude_duplicate_sentences or '0' }}"
+      hx-get="/lookups?unique={{ filters.show_unique_sentences }}"
       hx-trigger="load"
       hx-swap="beforeend"
     >
+      {# Table rows will be inserted here #}
     </tbody>
   </table>
 </div>

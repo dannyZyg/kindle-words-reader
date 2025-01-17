@@ -1,9 +1,9 @@
 <tr
   id="{{ item.id }}"
 
-  {% if is_last_item and next_page_num %}
+  {% if is_last_item and filters.page %}
 
-  hx-get="/lookups?unique={{ exclude_duplicate_sentences }}&page={{ next_page_num }}"
+  hx-get="/lookups?unique={{ filters.show_unique_sentences }}&page={{ filters.page }}"
   hx-trigger="intersect once"
   hx-swap="afterend"
 

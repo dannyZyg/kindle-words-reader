@@ -1,0 +1,32 @@
+<div id="filters">
+  <fieldset>
+    <legend>Show Unique Sentences</legend>
+
+    <div>
+      <input
+        type="radio"
+        id="show_unique"
+        name="unique"
+        value="true"
+        hx-get="/lookups"
+        hx-target="#lookup-table-body"
+        hx-swap="#innerHTML"
+      />
+      <label for="huey">Unique Sentences</label>
+    </div>
+
+    <div>
+      <input
+        type="radio"
+        id="show_all"
+        name="unique"
+        value="false"
+        hx-get="/lookups"
+        hx-target="#lookup-table-body"
+        hx-swap="#innerHTML"
+        checked
+      />
+      <label for="dewey">All</label>
+    </div>
+  </fieldset>
+</div>

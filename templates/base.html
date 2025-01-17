@@ -10,7 +10,7 @@
   <h1>Kindle Vocabulary</h1>
   <h2>Word Lookups</h2>
 
-  <button hx-get="/?unique=1" hx-target="#lookup-table">Show unique sentences</button>
+  {% include "includes/filters.html" %}
 
   {% block table %}
   {% endblock %}
