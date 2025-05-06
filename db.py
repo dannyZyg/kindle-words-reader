@@ -47,16 +47,29 @@ class Lookup:
 
 
 class KindleVocabDB:
+    _instance = None
+
     def __init__(self, path: str) -> None:
-        self.db = sqlite3.connect(path)
-        self.db.row_factory = self._lookup_factory
+
+        if KindleVocabDB._instance is not None:
+            raise RuntimeError("call instance() instead")
+
+        self._db: sqlite3.Connection = sqlite3.connect(path)
+        self._db.row_factory = self._lookup_factory
+
+    @classmethod
+    def instance(cls, path: str):
+        if not cls._instance:
+            cls._instance = cls(path)
+
+        return cls._instance
 
     def _convert_to_datetime(self, timestamp_ms: int) -> datetime:
         """Returns the UTC datetime from the db timestamp."""
 
         # database timestamps are in ms. Convert to seconds.
         timestamp_sec = timestamp_ms / 1000
-        return datetime.fromtimestamp(timestamp=timestamp_sec, tz=timezone.utc)
+        return datetime.fromtimestamp(timestamp_sec, tz=timezone.utc)
 
     def _lookup_factory(self, cursor: sqlite3.Cursor, row: sqlite3.Row) -> Lookup:
         """ Maps a table row to Lookup objects """
@@ -67,18 +80,18 @@ class KindleVocabDB:
 
         # Transform to Lookup object
         return Lookup(
-            id=names_to_values.get(LookupTable.ID.value, None),
-            sentence=names_to_values.get(LookupTable.USAGE.value, None),
+            id=names_to_values.get(LookupTable.ID.value, ""),
+            sentence=names_to_values.get(LookupTable.USAGE.value, ""),
             date=self._convert_to_datetime(names_to_values.get(LookupTable.TIMESTAMP.value, 0)),
-            word=names_to_values.get(WordTable.WORD.value, None),
-            word_id=names_to_values.get(WordTable.ID.value, None),
-            book=names_to_values.get(BookTable.TITLE.value, None),
-            language=names_to_values.get(WordTable.LANG.value, None),
+            word=names_to_values.get(WordTable.WORD.value, ""),
+            word_id=names_to_values.get(WordTable.ID.value, ""),
+            book=names_to_values.get(BookTable.TITLE.value, ""),
+            language=names_to_values.get(WordTable.LANG.value, ""),
             category=LearningState(names_to_values.get(WordTable.CATEGORY.value)),
         )
 
     def get_lookups(self, limit: int = 50, exclude_duplicate_usage_lookups: bool = False, page: int = 0) -> list[Lookup]:
-        cursor = self.db.cursor()
+        cursor = self._db.cursor()
 
         offset = limit * page
 
@@ -116,3 +129,9 @@ class KindleVocabDB:
 
         result = cursor.execute(sql, (limit, offset))
         return result.fetchall()
+
+    def close(self):
+        """Closes the database connection."""
+        if hasattr(self, '_db') and self._db:
+            self._db.close()
+            print("Database connection closed.")

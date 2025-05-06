@@ -1,12 +1,12 @@
 from dataclasses import dataclass
-from typing import Literal
+from typing import Annotated, Literal
 import os
 import platform
 import sqlite3
 import threading
 import time
 import uvicorn
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Depends
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from jinja2 import Environment, FileSystemLoader
@@ -42,12 +42,20 @@ class Filters:
 
 def shutdown_server():
     print("Exiting...")
+    if hasattr(app.state, 'db_instance') and app.state.db_instance:
+        app.state.db_instance.close()
     os._exit(0)
 
 
+def get_db(request: Request) -> KindleVocabDB:
+    """Dependency that provides the shared KindleVocabDB instance."""
+    # The instance is stored in the app state during startup
+    db_instance = request.app.state.db_instance
+    return db_instance
+
+
 @app.get("/lookups", response_class=HTMLResponse)
-async def lookups(request: Request):
-    global db
+async def lookups(request: Request, db: Annotated[KindleVocabDB, Depends(get_db)]):
 
     show_unique_sentences = "true" if request.query_params.get('unique') == "true" else "false"
 
@@ -73,6 +81,7 @@ async def lookups(request: Request):
         # so would get deadlocked.
 
         threading.Thread(target=shutdown_server).start()
+        return HTMLResponse(content="<p>Database error. Server shutting down.</p>", status_code=500)
     else:
         # If no exception has occurred, return the results
 
@@ -132,18 +141,27 @@ def wait_for_kindle():
 
 def serve_db(vocab_db_path):
     # Connect to the DB in read only mode and serve it up
-    global db
     db_uri = f"file:{vocab_db_path}?mode=ro"
 
-    db = KindleVocabDB(db_uri)
+    try:
+        db_instance = KindleVocabDB.instance(db_uri)
+        app.state.db_instance = db_instance
+        print("Database instance created and stored in app state.")
+    except Exception as e:
+        print(f"Failed to initialize database instance: {e}")
+        return # Exit the function, preventing the server from starting
+
     config = uvicorn.Config(app=app, host="127.0.0.1", port=PORT)
     server = uvicorn.Server(config)
+
+    print(f"Starting server on http://localhost:{PORT}")
 
     try:
         server.run()
     except KeyboardInterrupt:
+        print("\nShutdown requested via KeyboardInterrupt...")
+    finally:
         shutdown_server()
-
 
 if __name__ == "__main__":
     while True:
