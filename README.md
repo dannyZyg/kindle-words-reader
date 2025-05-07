@@ -1,10 +1,21 @@
 # kindle-vocab
 
-Serves your saved vocabulary in JSON format from your USB-connected Kindle.
+Explore your saved vocabulary and dictionary lookups from your USB-connected Kindle!
+
+![Alt text](screenshots/lookups.png)
+
+## Motivation
+
+With this program you can quickly revisit words that you looked up while reading on your Kindle.
+
+From here you could easily create Anki flash cards with tools like:
+
+- [Yomitan](https://yomitan.wiki/) (Open Source)
+- [Migaku](https://migaku.com/) (Not Sponsored)
 
 ## Getting Started
 
-Install `uv` via Homebrew if you don't yet have it: `brew install uv`. There are no dependencies outside of the stdlib at the moment but this will get the correct Python version and all set up.
+Install `uv` via Homebrew if you don't yet have it: `brew install uv`.
 
 1. `uv venv`
 2. `uv pip sync pyproject.toml`
