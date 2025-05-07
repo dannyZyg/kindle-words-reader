@@ -35,6 +35,12 @@ class LearningState(Enum):
 
 
 @dataclass
+class Book:
+    id: str
+    title: str
+
+
+@dataclass
 class Lookup:
     id: str  # CR!D7ZAMANRR92JQCKW5YCR7V5E92ST:CC94DA53:1133:5
     word: str
@@ -55,7 +61,6 @@ class KindleVocabDB:
             raise RuntimeError("call instance() instead")
 
         self._db: sqlite3.Connection = sqlite3.connect(path)
-        self._db.row_factory = self._lookup_factory
 
     @classmethod
     def instance(cls, path: str):
@@ -70,6 +75,17 @@ class KindleVocabDB:
         # database timestamps are in ms. Convert to seconds.
         timestamp_sec = timestamp_ms / 1000
         return datetime.fromtimestamp(timestamp_sec, tz=timezone.utc)
+
+    def _book_factory(self, cursor: sqlite3.Cursor, row: sqlite3.Row) -> Book:
+        # Get the column names
+        fields = [column[0] for column in cursor.description]
+        # Create a dict for the row of column name to value
+        names_to_values = {key: value for key, value in zip(fields, row)}
+
+        return Book(
+            id=names_to_values.get(BookTable.ID.value, ""),
+            title=names_to_values.get(BookTable.TITLE.value, ""),
+        )
 
     def _lookup_factory(self, cursor: sqlite3.Cursor, row: sqlite3.Row) -> Lookup:
         """ Maps a table row to Lookup objects """
@@ -90,8 +106,24 @@ class KindleVocabDB:
             category=LearningState(names_to_values.get(WordTable.CATEGORY.value)),
         )
 
+    def get_books_with_lookups(self) -> list[Book]:
+        cursor = self._db.cursor()
+        cursor.row_factory = self._book_factory
+
+        sql = """
+        SELECT DISTINCT
+            b.id as book_id,
+            b.title as book_title
+        FROM LOOKUPS lu
+        INNER JOIN BOOK_INFO b ON b.id = lu.book_key
+        ORDER BY b.title ASC;
+        """
+        result = cursor.execute(sql)
+        return result.fetchall()
+
     def get_lookups(self, limit: int = 50, exclude_duplicate_usage_lookups: bool = False, page: int = 0) -> list[Lookup]:
         cursor = self._db.cursor()
+        cursor.row_factory = self._lookup_factory
 
         offset = limit * page
 

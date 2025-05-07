@@ -1,12 +1,13 @@
-from dataclasses import dataclass
-from typing import Annotated, Literal
 import os
 import platform
 import sqlite3
 import threading
 import time
 import uvicorn
+from dataclasses import dataclass
+from typing import Annotated, Literal
 from fastapi import FastAPI, Request, Depends
+from starlette.datastructures import QueryParams
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from jinja2 import Environment, FileSystemLoader
@@ -31,13 +32,32 @@ MOUNT_POINTS_PER_SYSTEM = {"Darwin": "/Volumes"}
 # What port to serve the local "API" on
 PORT = 11000
 
-db = None
 
 @dataclass
 class Filters:
     show_unique_sentences: Literal["true"] | Literal["false"]
     limit: int = 10
     page: int = 0
+
+    @classmethod
+    def from_query_params(cls, query_params: QueryParams):
+        show_unique_sentences = "true" if query_params.get('unique') == "true" else "false"
+        return cls(
+            show_unique_sentences=show_unique_sentences,
+            page=int(query_params.get('page', 0)) + 1,  # The next request will use this value for next page
+        )
+
+@dataclass
+class Sorting:
+    sort_by: str = ""
+    sort_order: str = ""
+
+    @classmethod
+    def from_query_params(cls, query_params: QueryParams):
+        return cls(
+            sort_by=query_params.get("sort_by", ""),
+            sort_order=query_params.get("sort_order", "asc")
+        )
 
 
 def shutdown_server():
@@ -56,13 +76,8 @@ def get_db(request: Request) -> KindleVocabDB:
 
 @app.get("/lookups", response_class=HTMLResponse)
 async def lookups(request: Request, db: Annotated[KindleVocabDB, Depends(get_db)]):
-
-    show_unique_sentences = "true" if request.query_params.get('unique') == "true" else "false"
-
-    filters = Filters(
-        show_unique_sentences=show_unique_sentences,
-        page=int(request.query_params.get('page', 0)) + 1,  # The next request will use this value for next page
-    )
+    sorting = Sorting.from_query_params(request.query_params)
+    filters = Filters.from_query_params(request.query_params)
 
     try:
         results = db.get_lookups(
@@ -94,6 +109,7 @@ async def lookups(request: Request, db: Annotated[KindleVocabDB, Depends(get_db)
                 item=item,
                 is_last_item=is_last_item,
                 filters=filters,
+                sorting=sorting,
             )
             rendered_rows.append(html_content)
 
@@ -101,10 +117,13 @@ async def lookups(request: Request, db: Annotated[KindleVocabDB, Depends(get_db)
 
 
 @app.get("/", response_class=HTMLResponse)
-async def index(_: Request):
+async def index(_: Request, db: Annotated[KindleVocabDB, Depends(get_db)]):
     filters = Filters(show_unique_sentences="false")
+    sorting = Sorting()
+
+    books = db.get_books_with_lookups()
     template = templates_env.get_template("index.html")
-    html_content = template.render(filters=filters)
+    html_content = template.render(filters=filters, sorting=sorting, books=books)
     return HTMLResponse(content=html_content)
 
 

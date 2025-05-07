@@ -1,32 +1,60 @@
 <div id="filters">
-  <fieldset>
-    <legend>Show Unique Sentences</legend>
+  <div class="card p-3 mb-4">
+    <form
+      id="filter-form"
+      hx-get="/lookups"
+      hx-target="#lookup-table-body"
+      hx-swap="innerHTML"
+    >
 
-    <div>
-      <input
-        type="radio"
-        id="show_unique"
-        name="unique"
-        value="true"
+      <div class="filters row g-3 align-items-end">
+        <div class="col-md-auto">
+          <label for="book-filter" class="form-label">Filter by Book:</label>
+          <select id="book-filter" name="book-filter" class="form-select">
+            <option value="">All Books</option>
+            {% for book in books %}
+              <option value="{{ book.id }}">{{ book.title }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-auto">
+          <label for="start-date-filter" class="form-label">From Date:</label>
+          <input type="date" id="start-date-filter" name="start-date-filter" class="form-control">
+        </div>
+        <div class="col-md-auto">
+          <label for="end-date-filter" class="form-label">To Date:</label>
+          <input type="date" id="end-date-filter" name="end-date-filter" class="form-control">
+        </div>
+        <div class="col-md-auto form-check">
+          <input type="checkbox" id="unique-sentences-filter" name="unique" value="true" checked>
+          <label for="unique-sentences-filter" class="form-check-label">Unique Sentences</label>
+        </div>
+        <div class="col-md-auto">
+          <button type="submit" class="btn btn-primary">Apply Filters</button>
+        </div>
+      </div>
+    </form>
+
+    <div class="mt-2">
+      <button
+        id="clear-filters-btn"
+        onclick="resetFilterForm();"
         hx-get="/lookups"
         hx-target="#lookup-table-body"
-        hx-swap="#innerHTML"
-      />
-      <label for="huey">Unique Sentences</label>
+        hx-swap="innerHTML"
+        class="btn btn-secondary"
+      >
+         Clear Filters
+     </button>
     </div>
-
-    <div>
-      <input
-        type="radio"
-        id="show_all"
-        name="unique"
-        value="false"
-        hx-get="/lookups"
-        hx-target="#lookup-table-body"
-        hx-swap="#innerHTML"
-        checked
-      />
-      <label for="dewey">All</label>
-    </div>
-  </fieldset>
+  </div>
 </div>
+
+<script>
+  function resetFilterForm() {
+    const form = document.getElementById('filter-form');
+    if (form) {
+      form.reset();
+    }
+  }
+</script>
