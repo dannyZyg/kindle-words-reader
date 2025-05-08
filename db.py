@@ -6,7 +6,8 @@ from params import Filters
 
 
 class WordTable(Enum):
-    """ Column names for word table """
+    """Column names for word table"""
+
     ID = "word_id"
     WORD = "word"
     STEM = "stem"
@@ -15,7 +16,8 @@ class WordTable(Enum):
 
 
 class LookupTable(Enum):
-    """ Column names for lookup table """
+    """Column names for lookup table"""
+
     ID = "lookup_id"
     WORD = "word_key"
     BOOK = "book_key"
@@ -24,7 +26,8 @@ class LookupTable(Enum):
 
 
 class BookTable(Enum):
-    """ Column names for book table """
+    """Column names for book table"""
+
     ID = "book_id"
     TITLE = "book_title"
     AUTHORS = "book_authors"
@@ -57,7 +60,6 @@ class KindleVocabDB:
     _instance = None
 
     def __init__(self, path: str) -> None:
-
         if KindleVocabDB._instance is not None:
             raise RuntimeError("call instance() instead")
 
@@ -81,7 +83,7 @@ class KindleVocabDB:
         """Converts a UTC datetime to milliseconds since epoch."""
         # Ensure the datetime object is timezone-aware (UTC in this case)
         if dt.tzinfo is None:
-             # Assuming naive datetimes are UTC if not specified otherwise
+            # Assuming naive datetimes are UTC if not specified otherwise
             dt = dt.replace(tzinfo=timezone.utc)
         return int(dt.timestamp() * 1000)
 
@@ -97,7 +99,7 @@ class KindleVocabDB:
         )
 
     def _lookup_factory(self, cursor: sqlite3.Cursor, row: sqlite3.Row) -> Lookup:
-        """ Maps a table row to Lookup objects """
+        """Maps a table row to Lookup objects"""
         # Get the column names
         fields = [column[0] for column in cursor.description]
         # Create a dict for the row of column name to value
@@ -107,7 +109,9 @@ class KindleVocabDB:
         return Lookup(
             id=names_to_values.get(LookupTable.ID.value, ""),
             sentence=names_to_values.get(LookupTable.USAGE.value, ""),
-            date=self._convert_to_datetime(names_to_values.get(LookupTable.TIMESTAMP.value, 0)),
+            date=self._convert_to_datetime(
+                names_to_values.get(LookupTable.TIMESTAMP.value, 0)
+            ),
             word=names_to_values.get(WordTable.WORD.value, ""),
             word_id=names_to_values.get(WordTable.ID.value, ""),
             book=names_to_values.get(BookTable.TITLE.value, ""),
@@ -201,6 +205,6 @@ class KindleVocabDB:
 
     def close(self):
         """Closes the database connection."""
-        if hasattr(self, '_db') and self._db:
+        if hasattr(self, "_db") and self._db:
             self._db.close()
             print("Database connection closed.")

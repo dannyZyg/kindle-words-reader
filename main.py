@@ -34,7 +34,7 @@ PORT = 11000
 
 def shutdown_server():
     print("Exiting...")
-    if hasattr(app.state, 'db_instance') and app.state.db_instance:
+    if hasattr(app.state, "db_instance") and app.state.db_instance:
         app.state.db_instance.close()
     os._exit(0)
 
@@ -66,7 +66,9 @@ async def lookups(request: Request, db: Annotated[KindleVocabDB, Depends(get_db)
         # so would get deadlocked.
 
         threading.Thread(target=shutdown_server).start()
-        return HTMLResponse(content="<p>Database error. Server shutting down.</p>", status_code=500)
+        return HTMLResponse(
+            content="<p>Database error. Server shutting down.</p>", status_code=500
+        )
     else:
         # If no exception has occurred, return the results
 
@@ -83,10 +85,9 @@ async def lookups(request: Request, db: Annotated[KindleVocabDB, Depends(get_db)
             )
             rendered_rows.append(html_content)
 
-
         if results:
             # This will set up the page number in the form for the next page of the query
-            page_num = f'<input type="hidden" id="page-filter-hidden" name="page" value="{ filters.page + 1 }" hx-swap-oob="true">'
+            page_num = f'<input type="hidden" id="page-filter-hidden" name="page" value="{filters.page + 1}" hx-swap-oob="true">'
         else:
             page_num = ""
 
@@ -146,7 +147,7 @@ def serve_db(vocab_db_path):
         print("Database instance created and stored in app state.")
     except Exception as e:
         print(f"Failed to initialize database instance: {e}")
-        return # Exit the function, preventing the server from starting
+        return  # Exit the function, preventing the server from starting
 
     config = uvicorn.Config(app=app, host="127.0.0.1", port=PORT)
     server = uvicorn.Server(config)

@@ -15,7 +15,9 @@ class Filters:
 
     @classmethod
     def from_query_params(cls, query_params: QueryParams):
-        show_unique_sentences = "true" if query_params.get("unique") == "true" else "false"
+        show_unique_sentences = (
+            "true" if query_params.get("unique") == "true" else "false"
+        )
         return cls(
             show_unique_sentences=show_unique_sentences,
             page=int(query_params.get("page", 0)),
@@ -46,5 +48,5 @@ class Sorting:
     def from_query_params(cls, query_params: QueryParams):
         return cls(
             sort_by=query_params.get("sort_by", "date"),
-            sort_order=query_params.get("sort_order", "asc")
+            sort_order=query_params.get("sort_order", "asc"),
         )
