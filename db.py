@@ -2,6 +2,7 @@ import sqlite3
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from enum import Enum
+from params import Filters
 
 
 class WordTable(Enum):
@@ -70,11 +71,19 @@ class KindleVocabDB:
         return cls._instance
 
     def _convert_to_datetime(self, timestamp_ms: int) -> datetime:
-        """Returns the UTC datetime from the db timestamp."""
+        """Returns the UTC datetime from the db ms timestamp."""
 
         # database timestamps are in ms. Convert to seconds.
         timestamp_sec = timestamp_ms / 1000
         return datetime.fromtimestamp(timestamp_sec, tz=timezone.utc)
+
+    def _datetime_to_milliseconds(self, dt: datetime) -> int:
+        """Converts a UTC datetime to milliseconds since epoch."""
+        # Ensure the datetime object is timezone-aware (UTC in this case)
+        if dt.tzinfo is None:
+             # Assuming naive datetimes are UTC if not specified otherwise
+            dt = dt.replace(tzinfo=timezone.utc)
+        return int(dt.timestamp() * 1000)
 
     def _book_factory(self, cursor: sqlite3.Cursor, row: sqlite3.Row) -> Book:
         # Get the column names
@@ -121,22 +130,13 @@ class KindleVocabDB:
         result = cursor.execute(sql)
         return result.fetchall()
 
-    def get_lookups(self, limit: int = 50, exclude_duplicate_usage_lookups: bool = False, page: int = 0) -> list[Lookup]:
+    def get_lookups(self, filters: Filters) -> list[Lookup]:
         cursor = self._db.cursor()
         cursor.row_factory = self._lookup_factory
 
-        offset = limit * page
+        offset = filters.limit * filters.page
 
-        unique_query = """
-        WHERE lu.usage IN (
-            SELECT lu.usage
-            FROM LOOKUPS lu
-            GROUP BY lu.usage
-            HAVING COUNT(*) = 1
-        )
-        """
-
-        sql = f"""
+        sql_base = """
         SELECT
             lu.id as lookup_id,
             lu.word_key,
@@ -154,12 +154,49 @@ class KindleVocabDB:
         FROM LOOKUPS lu
         INNER JOIN WORDS w ON w.id = lu.word_key
         INNER JOIN BOOK_INFO b ON b.id = lu.book_key
-        {unique_query if exclude_duplicate_usage_lookups else ""}
+        """
+
+        where_clauses = []
+        parameters = []
+
+        if filters.should_show_unique_sentences():
+            where_clauses.append("""
+                lu.usage IN (
+                    SELECT lu.usage
+                    FROM LOOKUPS lu
+                    GROUP BY lu.usage
+                    HAVING COUNT(*) = 1
+                )
+            """)
+
+        if filters.date_from:
+            # Convert datetime to milliseconds since epoch for comparison
+            date_from_ms = self._datetime_to_milliseconds(filters.date_from)
+            where_clauses.append("lu.timestamp >= ?")
+            parameters.append(date_from_ms)
+
+        if filters.date_to:
+            # Convert datetime to milliseconds since epoch for comparison
+            date_to_ms = self._datetime_to_milliseconds(filters.date_to)
+            where_clauses.append("lu.timestamp <= ?")
+            parameters.append(date_to_ms)
+
+        if filters.book_id:
+            where_clauses.append("lu.book_key = ?")
+            parameters.append(filters.book_id)
+
+        # Combine WHERE clauses if any
+        if where_clauses:
+            sql_base += " WHERE " + " AND ".join(where_clauses)
+
+        # Add ORDER BY, LIMIT, and OFFSET
+        sql_base += """
         ORDER BY lu.timestamp DESC
         LIMIT ? OFFSET ?
         """
+        parameters.extend([filters.limit, offset])
 
-        result = cursor.execute(sql, (limit, offset))
+        result = cursor.execute(sql_base, parameters)
         return result.fetchall()
 
     def close(self):

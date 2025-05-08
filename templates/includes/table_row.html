@@ -1,19 +1,20 @@
 <tr
   id="{{ item.id }}"
 
-  {% if is_last_item and filters.page %}
+  {% if is_last_item %}
 
-  hx-get="/lookups?unique={{ filters.show_unique_sentences }}&page={{ filters.page }}"
+  hx-get="/lookups"
+  hx-vals='{"sort_by": "date", "sort_order": "{{ "asc" if sorting.sort_order == "asc" else "desc" }}"}'
+  hx-include="#filter-form"
   hx-trigger="intersect once"
-  hx-swap="afterend"
+  hx-target="#lookup-table-body"
+  hx-swap="beforeend"
 
   {% endif %}
 >
-  <td>{{ item.word }}</td>
+  <td class="text-center">{{ item.word }}</td>
   <td>{{ item.book }}</td>
   <td>{{ item.sentence }}</td>
-  <td>{{ item.date.strftime('%Y-%m-%d %H:%M:%S') }}</td>
-  <td>{{ item.word_id }}</td>
-  <td>{{ item.language }}</td>
-  <td>{{ item.category.name }}</td>
+  <td class="text-center">{{ item.date.strftime('%Y-%m-%d') }}</td>
+  <td class="text-center">{{ item.language }}</td>
 </tr>

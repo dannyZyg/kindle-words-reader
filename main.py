@@ -4,14 +4,13 @@ import sqlite3
 import threading
 import time
 import uvicorn
-from dataclasses import dataclass
-from typing import Annotated, Literal
+from typing import Annotated
 from fastapi import FastAPI, Request, Depends
-from starlette.datastructures import QueryParams
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from jinja2 import Environment, FileSystemLoader
 from db import KindleVocabDB
+from params import Filters, Sorting
 
 
 app = FastAPI()
@@ -31,33 +30,6 @@ MOUNT_POINTS_PER_SYSTEM = {"Darwin": "/Volumes"}
 
 # What port to serve the local "API" on
 PORT = 11000
-
-
-@dataclass
-class Filters:
-    show_unique_sentences: Literal["true"] | Literal["false"]
-    limit: int = 10
-    page: int = 0
-
-    @classmethod
-    def from_query_params(cls, query_params: QueryParams):
-        show_unique_sentences = "true" if query_params.get('unique') == "true" else "false"
-        return cls(
-            show_unique_sentences=show_unique_sentences,
-            page=int(query_params.get('page', 0)) + 1,  # The next request will use this value for next page
-        )
-
-@dataclass
-class Sorting:
-    sort_by: str = ""
-    sort_order: str = ""
-
-    @classmethod
-    def from_query_params(cls, query_params: QueryParams):
-        return cls(
-            sort_by=query_params.get("sort_by", ""),
-            sort_order=query_params.get("sort_order", "asc")
-        )
 
 
 def shutdown_server():
@@ -81,9 +53,7 @@ async def lookups(request: Request, db: Annotated[KindleVocabDB, Depends(get_db)
 
     try:
         results = db.get_lookups(
-            limit=filters.limit,
-            exclude_duplicate_usage_lookups=filters.show_unique_sentences == "true",
-            page=filters.page,
+            filters=filters,
         )
     except sqlite3.DatabaseError as e:
         print(e)
@@ -101,11 +71,11 @@ async def lookups(request: Request, db: Annotated[KindleVocabDB, Depends(get_db)
         # If no exception has occurred, return the results
 
         rendered_rows = []
-        template = templates_env.get_template("includes/table_row.html")
+        row_template = templates_env.get_template("includes/table_row.html")
 
         for i, item in enumerate(results):
             is_last_item = i == len(results) - 1
-            html_content = template.render(
+            html_content = row_template.render(
                 item=item,
                 is_last_item=is_last_item,
                 filters=filters,
@@ -113,7 +83,15 @@ async def lookups(request: Request, db: Annotated[KindleVocabDB, Depends(get_db)
             )
             rendered_rows.append(html_content)
 
-        return HTMLResponse(content="".join(rendered_rows))
+
+        if results:
+            # This will set up the page number in the form for the next page of the query
+            page_num = f'<input type="hidden" id="page-filter-hidden" name="page" value="{ filters.page + 1 }" hx-swap-oob="true">'
+        else:
+            page_num = ""
+
+        rows_html = "".join(rendered_rows)
+        return HTMLResponse(content=rows_html + page_num)
 
 
 @app.get("/", response_class=HTMLResponse)
