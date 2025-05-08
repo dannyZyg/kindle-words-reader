@@ -2,7 +2,7 @@
 
 Explore your saved vocabulary and dictionary lookups from your USB-connected Kindle!
 
-![Alt text](screenshots/lookups.png)
+![Alt text](screenshots/screenshot.png)
 
 ## Motivation
 
